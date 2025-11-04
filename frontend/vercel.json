@@ -1,6 +1,12 @@
 {
   "version": 2,
   "builds": [{ "src": "package.json", "use": "@vercel/static-build" }],
-  "routes": [{ "src": "/(.*)", "dest": "/index.html" }],
+  "routes": [
+    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "src": "/static/(.*)", "dest": "/static/$1" },
+    { "src": "/asset-manifest.json", "dest": "/asset-manifest.json" },
+    { "src": "/robots.txt", "dest": "/robots.txt" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
   "outputDirectory": "build"
 }
