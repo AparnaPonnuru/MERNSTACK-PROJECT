@@ -22,6 +22,14 @@ import SettingsDialog from './components/SettingsDialog';
 import './styles/global.css';
 import './styles/components.css';
 
+// Module-scoped API base and stable axios instance.
+// This prevents recreating the axios instance on every render and satisfies hook lint rules.
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  // headers: { 'Content-Type': 'application/json' } // add if needed
+});
+
 function App() {
   const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState('');
@@ -37,17 +45,6 @@ function App() {
   const [total, setTotal] = useState(0);
   const [locations, setLocations] = useState([]);
   const [industries, setIndustries] = useState([]);
-
-  // Read API base URL from env var. Fallback to localhost for dev.
-  // In React apps, prefix env var with REACT_APP_ (create-react-app convention).
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
-
-  // Create axios instance with baseURL so you can reuse and later add interceptors.
-  const api = axios.create({
-    baseURL: API_BASE_URL,
-    // you can add default headers here if needed
-    // headers: { 'Content-Type': 'application/json' }
-  });
 
   const theme = createTheme({
     palette: {
@@ -86,11 +83,10 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [search, locationFilter, industryFilter, API_BASE_URL]); // added API_BASE_URL to deps for completeness
+  }, [search, locationFilter, industryFilter]);
 
   useEffect(() => {
     fetchCompanies();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchCompanies]);
 
   useEffect(() => {
