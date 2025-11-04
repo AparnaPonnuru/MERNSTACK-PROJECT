@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { 
-  Container, 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  IconButton, 
-  Box, 
-  Grid, 
-  Button, 
+import {
+  Container,
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Box,
+  Grid,
+  Button,
   Paper
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import axios from 'axios';
 import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
 import FilterDropdown from './components/FilterDropdown';
@@ -22,13 +21,20 @@ import SettingsDialog from './components/SettingsDialog';
 import './styles/global.css';
 import './styles/components.css';
 
-// Module-scoped API base and stable axios instance.
-// This prevents recreating the axios instance on every render and satisfies hook lint rules.
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  // headers: { 'Content-Type': 'application/json' } // add if needed
-});
+// Module-scoped API base so it's stable across renders and hooks
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
+async function fetchJson(url, options = {}) {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    const err = new Error(`Request failed with status ${res.status}`);
+    err.status = res.status;
+    err.body = text;
+    throw err;
+  }
+  return res.json();
+}
 
 function App() {
   const [companies, setCompanies] = useState([]);
@@ -69,17 +75,22 @@ function App() {
       if (locationFilter) params.location = locationFilter;
       if (industryFilter) params.industry = industryFilter;
 
-      const response = await api.get('/companies', { params });
-      setCompanies(response.data);
-      setTotal(response.data.length);
-      if (!search && !locationFilter && !industryFilter) {
-        const uniqueLocations = [...new Set(response.data.map(c => c.location).filter(Boolean))].sort();
-        const uniqueIndustries = [...new Set(response.data.map(c => c.industry).filter(Boolean))].sort();
+      const qs = new URLSearchParams(params).toString();
+      const url = `${API_BASE_URL}/companies${qs ? `?${qs}` : ''}`;
+
+      const data = await fetchJson(url);
+      setCompanies(data);
+      setTotal(Array.isArray(data) ? data.length : 0);
+
+      if (!search && !locationFilter && !industryFilter && Array.isArray(data)) {
+        const uniqueLocations = [...new Set(data.map(c => c.location).filter(Boolean))].sort();
+        const uniqueIndustries = [...new Set(data.map(c => c.industry).filter(Boolean))].sort();
         setLocations(uniqueLocations);
         setIndustries(uniqueIndustries);
       }
     } catch (error) {
-      console.error('Error fetching companies:', error);
+      // helpful logging for debugging in Vercel logs or browser console
+      console.error('Error fetching companies:', error, error?.body ?? '');
     } finally {
       setLoading(false);
     }
@@ -158,7 +169,7 @@ function App() {
             </Typography>
           </Toolbar>
         </AppBar>
-        
+
         <Sidebar
           open={sidebarOpen}
           onClose={handleSidebarToggle}
@@ -166,7 +177,7 @@ function App() {
           onAboutOpen={handleAboutOpen}
           darkMode={darkMode}
         />
-        
+
         {/* Main Content */}
         <Box component="main" className="main-content">
           <Container maxWidth="xl">
@@ -190,8 +201,8 @@ function App() {
                   </Typography>
                 </div>
                 <Box textAlign="center" mt={3}>
-                  <Button 
-                    variant="contained" 
+                  <Button
+                    variant="contained"
                     onClick={handleAboutClose}
                     className="modern-btn"
                   >
@@ -236,7 +247,7 @@ function App() {
                       />
                     </Grid>
                   </Grid>
-                  
+
                   {/* Active Filters */}
                   {(search || locationFilter || industryFilter) && (
                     <div style={{ marginTop: '16px' }}>
@@ -278,12 +289,12 @@ function App() {
                     </Typography>
                   </div>
                 ) : (
-                  <CompanyList 
-                    companies={companies} 
-                    total={total} 
-                    page={page} 
-                    rowsPerPage={rowsPerPage} 
-                    onPageChange={handlePageChange} 
+                  <CompanyList
+                    companies={companies}
+                    total={total}
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    onPageChange={handlePageChange}
                     onRowsPerPageChange={handleRowsPerPageChange}
                     darkMode={darkMode}
                   />
